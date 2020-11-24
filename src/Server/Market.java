@@ -4,11 +4,12 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.util.*;
 
-public class Market {
+public class Market implements Runnable{
 
     //public static HashMap<Integer, ClientHandler> clients = new HashMap<Integer, ClientHandler>();
-    public static LinkedHashMap<Integer, ClientHandler> clients = new LinkedHashMap<Integer, ClientHandler>();
+    public static LinkedHashMap<String, ClientHandler> clients = new LinkedHashMap<String, ClientHandler>();
     private static ArrayList<Stock> stock = new ArrayList<Stock>();
+    private UpdateThread updateThread;
 
     public Market() {
         Stock item = new Stock("sample stock");
@@ -19,9 +20,9 @@ public class Market {
         return clients.get(ID);
     }
 
-    public static void disconnectClient(Integer ID){
+    public static void disconnectClient(String ID){
         clients.remove(ID);
-        if (stock.get(0).getOwner().getID() == ID){
+        if ((stock.get(0).getOwner().getID()).equals(ID)){
             resetStock();
             System.out.println("Stock is now unowned, waiting for next connection");
         }
@@ -46,11 +47,12 @@ public class Market {
     }
 
 
-    public static int generateID() {
-        return clients.size() + 1;
+    //TODO: Make longer IDs ie when numbers taken up perhaps start using letters such as 255A, 234B, etc.
+    public static String generateID() {
+        return String.valueOf(clients.size() + 1);
     }
 
-    public static ClientHandler getClient(int ID) {
+    public static ClientHandler getClient(String ID) {
         return clients.get(ID);
     }
 
@@ -66,7 +68,11 @@ public class Market {
         return total;
     }
 
+
+
+    //TODO doesnt work: may have to sync threads.
     public static boolean trade(ClientHandler newOwner, Stock stock) {
+
 
         /* UNCOMMENT FOR TESTING IF A TRADER DISCONNECTS MID-TRADE
         try {
@@ -80,14 +86,17 @@ public class Market {
         ClientHandler oldOwner = stock.getOwner();
         //Check if the owner is also the buyer
         if (stock.getOwner() == newOwner) {
-            newOwner.sendMessage("Buy failed: cannot sell to owner.");
-            System.out.println("Trader: " + newOwner.getID() + " tried to buy stock, but failed as they are already the owner.");
+            System.out.println("stock owner: " + stock.getOwner().getID());
+            System.out.println("new owner: " + newOwner.getID());
+            newOwner.sendMessage("Buy/Sell failed: cannot sell to owner.");
+            System.out.println("There was an attempted trade of: " + stock.getName() + " but failed, because the owner tried to trade with themselves.");
             return false;
         } else {
             stock.setOwner(newOwner);
-
+            System.out.println("new owner: " + stock.getOwner().getID());
             //Check that new owner has been assigned
             if (stock.getOwner() == newOwner) {
+
                 if ((oldOwner.isConnected()) && (newOwner.isConnected())) { //Check if traders are still connected before finalisation of trade.
                     return true;
                 } else {
@@ -120,4 +129,7 @@ public class Market {
         }
     }
 
+    @Override
+    public void run() {
+    }
 }

@@ -1,3 +1,5 @@
+//TODO make a file which stores the amount of conns.
+
 package Server;
 
 import java.io.IOException;
@@ -8,19 +10,23 @@ import java.net.Socket;
 public class Main {
 
     private final static int port = 8888;
-    private final static Market market = new Market();
+
+    private static Market market;
 
     public static void main(String[] args) {
         ServerSocket server = startServer();
         System.out.println("Server running and waiting for connections....");
+        new Thread(market = new Market()).start();
 
+        //TODO not handling multiple clients.
         while (true){
             try {
                 Socket socket = server.accept();
                 ClientHandler client;
 
-                new Thread(new ClientHandler(socket, market)).run();
+                System.out.println("main thread: " + Thread.currentThread().getId());
 
+                new Thread(new ClientHandler(socket, market)).start();
 
             } catch (IOException e) {
                 System.out.println("Error accepting client.");
@@ -47,12 +53,6 @@ public class Main {
             System.exit(100);
         }
         return socket;
-    }
-
-    //Send Message from server
-    public void sendMessage(int recipientID, String message){
-        ClientHandler recipient = Market.getClient(recipientID);
-        recipient.sendMessage(message);
     }
 
 

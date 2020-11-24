@@ -3,6 +3,8 @@ package Server;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.Socket;
+import java.util.Iterator;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Scanner;
 
@@ -12,7 +14,7 @@ public class ClientHandler implements Runnable{
     private Market market;
     private PrintWriter writer;
     private Scanner reader;
-    private int ID;
+    private String ID;
     private boolean connected;
 
 
@@ -32,27 +34,11 @@ public class ClientHandler implements Runnable{
         }
     }
 
-    /*
-    public void buyStock(){
-        Stock stock = Market.getStock("sample stock");
-        if (stock.getOwner() !=this){
-            stock.setOwner(this);
-            //check
-            if (stock.getOwner() == this){
-                System.out.println("Stock: " + stock.getName() + " now owned by trader ID: " + this.getID());
-            }
-            sendMessage("You now own the stock");
-        }else{
-            sendMessage("You are the owner of the stock already.");
-        }
-
-    }*/
-
     public void sendMessage(String message){
         writer.println(message);
     }
 
-    public int getID(){
+    public String getID(){
         return this.ID;
     }
 
@@ -60,69 +46,21 @@ public class ClientHandler implements Runnable{
         int items = market.getBalance(this);
         return items;
     }
-    @Override
-    public void run() {
-        try{
-            this.writer = new PrintWriter(socket.getOutputStream(), true);
-            this.reader =  new Scanner(socket.getInputStream());
-            String reconnection = "new connection"; //initiated to new connection
-            try {
-                reconnection = reader.nextLine();
-            }catch(NoSuchElementException e){
-                System.out.println("Error");
-            }
-            if (!(reconnection.equals("new connection"))){ //user has reconnected
-                this.ID = Integer.valueOf(reconnection);
-                System.out.println("Client reconnected with ID: " + this.ID);
-            }else{ //First time connection for user
-                this.ID = Market.generateID();
-                System.out.println("Client connected with ID: " + this.ID);
-                sendMessage(String.valueOf(this.ID));
-            }
 
-            //Add user to the Hashmap of connected traders.
-            Market.newConnection(this);
-
-
-            boolean connected = true;
-            while (connected) {
-                try{
-                    String input = reader.nextLine();
-                    switch (input.toLowerCase()) {
-                        case "balance":
-                            if (getBalance() !=0){
-                                sendMessage(String.valueOf(getBalance()));
-                            }else{
-                                sendMessage("You do not own any stock.");
-                            }
-                            break;
-                        case "buy":
-                            Market.trade(this, Market.getStock("sample stock"));
-                            break;
-                        case "sell":
-                            sendMessage("sell");
-                            break;
-                        case "status":
-                            sendMessage("Stock owned by trader: " + Market.getStock("sample stock").getOwner().getID());
-                            break;
-                        case "quit":
-                            quit();
-                            connected = false;
-                            break;
-                        default:
-                            System.out.println("error");
-                    }
-                }catch (NoSuchElementException e){
-                    connected = false;
-                    quit();
-                }
-
-            }
-        }catch (IOException e){
-            System.out.println("Error establishing I/O stream");
+    public String connectionsToString(){
+        StringBuilder result = new StringBuilder("[UPDATE]");
+        Iterator iterator = Market.clients.entrySet().iterator();
+        while (iterator.hasNext()) {
+            System.out.println("result: " + result);
+            Map.Entry pair = (Map.Entry)iterator.next();
+            ClientHandler client = (ClientHandler) pair.getValue();
+            result.append(" " + client.getID());
         }
 
+        return result.toString();
     }
+
+
 
     public void quit(){
         System.out.println("User: " + this.getID() + " disconnected from server.");
@@ -135,4 +73,103 @@ public class ClientHandler implements Runnable{
         this.connected = false;
         Thread.currentThread().interrupt(); //Closes current thread.
     }
+    @Override
+    public void run() {
+        System.out.println("client thread: " + Thread.currentThread().getId());
+        try{
+            this.writer = new PrintWriter(socket.getOutputStream(), true);
+            this.reader =  new Scanner(socket.getInputStream());
+            String reconnection = "new connection"; //initiated to new connection
+
+            try {
+                reconnection = reader.nextLine();
+            }catch(NoSuchElementException e){
+                System.out.println("Error");
+            }
+            if (!(reconnection.equals("new connection"))){ //user has reconnected
+                this.ID = reconnection;
+                System.out.println("Client reconnected with ID: " + this.ID);
+            }else{ //First time connection for user
+                this.ID = Market.generateID();
+                System.out.println("Client connected with ID: " + this.ID);
+                sendMessage(this.ID);
+            }
+
+            //Add user to the Hashmap of connected traders.
+            Market.newConnection(this);
+
+
+            this.setConnected(true);
+            while (connected) {
+                try{
+                    String input = reader.nextLine();
+                    if (!(input.equals("o"))){
+                        System.out.println("User  " + this.ID + " inputs: " + input);
+                    }
+
+                    switch (String.valueOf(input.toLowerCase())) {
+                        case "balance":
+                            if (getBalance() !=0){
+                                sendMessage(String.valueOf(getBalance()));
+                            }else{
+                                sendMessage("You do not own any stock.");
+                            }
+                            break;
+                        case "buy":
+                            //TODO Might have to go back to Market.trade as error is client side rather than serverside.
+                            boolean success = Market.trade(this, Market.getStock("sample stock"));
+                            if (success){
+                                sendMessage("Trade successful");
+                            }else{
+                                sendMessage("Trade unsucessful");
+                            }
+                            break;
+
+
+                        case "sell":
+                            String IDtoSellTo = reader.nextLine();
+                            ClientHandler clientToSellTo = Market.getClient(IDtoSellTo);
+                            Stock stock = Market.getStock("sample stock");
+                            if (clientToSellTo != null){
+                                if (stock.getOwner() == clientToSellTo){
+                                    Market.trade(clientToSellTo, stock);
+                                }else{
+                                    System.out.println("Trade unsucessful");
+                                    sendMessage("Trade unsucessful");
+                                }
+                            }else{
+                                System.out.println("Invalid client ID");
+                                sendMessage("Invalid client ID");
+                            }
+                            break;
+                        case "status":
+                            sendMessage("Stock owned by trader: " + Market.getStock("sample stock").getOwner().getID());
+                            break;
+                        case "connections":
+                            System.out.println("connections");
+                            String connectionsResponse = connectionsToString();
+                            sendMessage(connectionsResponse);
+                            break;
+                        case "quit":
+                            quit();
+                            connected = false;
+                            break;
+                        case "o": //Single character sent from the client every 5 seconds to see if the connection is still alive.
+                            break;
+                        default:
+                            System.out.println("error");System.out.println(input);
+                    }
+                }catch (NoSuchElementException e){
+                    this.setConnected(false);
+                    quit();
+                }
+
+            }
+        }catch (IOException e){
+            System.out.println("Error establishing I/O stream");
+        }
+
+    }
+
+
 }
