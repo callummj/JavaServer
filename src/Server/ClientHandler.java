@@ -2,7 +2,7 @@ package Server;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.net.Socket;
+import java.net.*;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -21,6 +21,7 @@ public class ClientHandler implements Runnable{
     public ClientHandler(Socket socket, Market market){
         this.socket = socket;
         this.market = market;
+
     }
 
     public boolean isConnected(){
@@ -50,13 +51,17 @@ public class ClientHandler implements Runnable{
     public String connectionsToString(){
         StringBuilder result = new StringBuilder("[UPDATE]");
         Iterator iterator = Market.clients.entrySet().iterator();
+        int i = 0;
         while (iterator.hasNext()) {
-            System.out.println("result: " + result);
+            i++;
+            System.out.println("i: " + i);
+
             Map.Entry pair = (Map.Entry)iterator.next();
             ClientHandler client = (ClientHandler) pair.getValue();
+            System.out.println("client: " + client.getID());
             result.append(" " + client.getID());
         }
-
+        System.out.println("result: " + result);
         return result.toString();
     }
 
@@ -64,7 +69,7 @@ public class ClientHandler implements Runnable{
 
     public void quit(){
         System.out.println("User: " + this.getID() + " disconnected from server.");
-        Market.disconnectClient(this.ID);
+        Market.disconnectClient(this);
         try {
             this.socket.close();
         } catch (IOException e) {
@@ -75,7 +80,7 @@ public class ClientHandler implements Runnable{
     }
     @Override
     public void run() {
-        System.out.println("client thread: " + Thread.currentThread().getId());
+
         try{
             this.writer = new PrintWriter(socket.getOutputStream(), true);
             this.reader =  new Scanner(socket.getInputStream());
@@ -100,6 +105,8 @@ public class ClientHandler implements Runnable{
 
 
             this.setConnected(true);
+
+            String connectionsResponse; //Used to send connections status to client
             while (connected) {
                 try{
                     String input = reader.nextLine();
@@ -147,7 +154,7 @@ public class ClientHandler implements Runnable{
                             break;
                         case "connections":
                             System.out.println("connections");
-                            String connectionsResponse = connectionsToString();
+                            connectionsResponse = connectionsToString();
                             sendMessage(connectionsResponse);
                             break;
                         case "quit":
@@ -155,6 +162,8 @@ public class ClientHandler implements Runnable{
                             connected = false;
                             break;
                         case "o": //Single character sent from the client every 5 seconds to see if the connection is still alive.
+                            connectionsResponse = connectionsToString();
+                            sendMessage(connectionsResponse);
                             break;
                         default:
                             System.out.println("error");System.out.println(input);

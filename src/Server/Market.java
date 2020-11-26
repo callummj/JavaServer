@@ -1,5 +1,9 @@
 package Server;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.util.*;
@@ -20,9 +24,10 @@ public class Market implements Runnable{
         return clients.get(ID);
     }
 
-    public static void disconnectClient(String ID){
-        clients.remove(ID);
-        if ((stock.get(0).getOwner().getID()).equals(ID)){
+    public static void disconnectClient(ClientHandler disconnectingClient){
+        clients.remove(disconnectingClient.getID());
+
+        if ((stock.get(0).getOwner() == disconnectingClient)){
             resetStock();
             System.out.println("Stock is now unowned, waiting for next connection");
         }
@@ -46,10 +51,49 @@ public class Market implements Runnable{
         }
     }
 
+    private static void updateIDFile(String ID){
+        try {
+            FileWriter myWriter = new FileWriter("lastID.txt");
+            myWriter.write(ID);
+            myWriter.close();
+        } catch (IOException e) {
+            System.out.println("Error creating save data");
+        }
+    }
+
+    private static String createIDFile() {
+        try {
+            FileWriter myWriter = new FileWriter("lastID.txt");
+            myWriter.write("1");
+            myWriter.close();
+        } catch (IOException e) {
+            System.out.println("Error creating save data");
+        }
+        return "1"; //1 is the first ID generated
+    }
 
     //TODO: Make longer IDs ie when numbers taken up perhaps start using letters such as 255A, 234B, etc.
-    public static String generateID() {
-        return String.valueOf(clients.size() + 1);
+    public static String generateID(){
+
+        File userdata;
+        userdata = new File("lastID.txt");
+        Scanner userDataReader = null;
+        String ID = "";
+        boolean createdFile = false;
+        try {
+            userDataReader = new Scanner(userdata);
+        } catch (FileNotFoundException e) { //File doesn't exist so create the file
+            ID = createIDFile();
+            createdFile = true;
+        }
+        if (!(createdFile)){
+            ID = userDataReader.nextLine();
+            userDataReader.close();
+        }
+
+        return ID;
+
+
     }
 
     public static ClientHandler getClient(String ID) {
@@ -71,7 +115,7 @@ public class Market implements Runnable{
 
 
     //TODO doesnt work: may have to sync threads.
-    public static boolean trade(ClientHandler newOwner, Stock stock) {
+    public static synchronized boolean trade(ClientHandler newOwner, Stock stock) {
 
 
         /* UNCOMMENT FOR TESTING IF A TRADER DISCONNECTS MID-TRADE

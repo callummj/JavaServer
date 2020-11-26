@@ -24,8 +24,6 @@ public class Main {
                 Socket socket = server.accept();
                 ClientHandler client;
 
-                System.out.println("main thread: " + Thread.currentThread().getId());
-
                 new Thread(new ClientHandler(socket, market)).start();
 
             } catch (IOException e) {
