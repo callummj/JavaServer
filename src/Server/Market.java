@@ -51,9 +51,9 @@ public class Market implements Runnable{
         }
     }
 
-    private static void updateIDFile(String ID){
+    public synchronized static void updateIDFile(String ID){
         try {
-            FileWriter myWriter = new FileWriter("lastID.txt");
+            FileWriter myWriter = new FileWriter("/JavaServer/src/lastID.txt");
             myWriter.write(ID);
             myWriter.close();
         } catch (IOException e) {
@@ -61,9 +61,9 @@ public class Market implements Runnable{
         }
     }
 
-    private static String createIDFile() {
+    private synchronized static String createIDFile() {
         try {
-            FileWriter myWriter = new FileWriter("lastID.txt");
+            FileWriter myWriter = new FileWriter("/JavaServer/src/lastID.txt");
             myWriter.write("1");
             myWriter.close();
         } catch (IOException e) {
@@ -73,10 +73,10 @@ public class Market implements Runnable{
     }
 
     //TODO: Make longer IDs ie when numbers taken up perhaps start using letters such as 255A, 234B, etc.
-    public static String generateID(){
+    public synchronized static String generateID(){
 
         File userdata;
-        userdata = new File("lastID.txt");
+        userdata = new File("/JavaServer/src/lastID.txt");
         Scanner userDataReader = null;
         String ID = "";
         boolean createdFile = false;
@@ -85,9 +85,13 @@ public class Market implements Runnable{
         } catch (FileNotFoundException e) { //File doesn't exist so create the file
             ID = createIDFile();
             createdFile = true;
+            ID = "1";
         }
         if (!(createdFile)){
             ID = userDataReader.nextLine();
+            int IDint = Integer.parseInt(ID); //Convert to int to increment
+            IDint++;
+            ID = String.valueOf(IDint);
             userDataReader.close();
         }
 
@@ -117,6 +121,7 @@ public class Market implements Runnable{
     //TODO doesnt work: may have to sync threads.
     public static synchronized boolean trade(ClientHandler newOwner, Stock stock) {
 
+        System.out.println(newOwner.getID() + " is in trade");
 
         /* UNCOMMENT FOR TESTING IF A TRADER DISCONNECTS MID-TRADE
         try {
@@ -145,13 +150,39 @@ public class Market implements Runnable{
                     return true;
                 } else {
                     stock.setOwner(oldOwner);
+                    System.out.println("new owner offline");
                     return false;
                 }
+            }else{
+                System.out.println("edge case");
+                return false;
             }
         }
-        return false;
+
     }
 
+    public static synchronized void userDisconnectionUpdate(String message){
+
+    }
+
+    //Updates the users of the current market
+    public static synchronized void updateMarket(String message){
+        /*
+        if (!(message.startsWith("[UPDATE]"))){
+            if (!(message.startsWith("[CONN]"))){
+                message = "[UPDATE] " + message;
+            }
+        }*/
+        System.out.println("sending update to clients. Message: " + message);
+        Iterator iterator = clients.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry pair = (Map.Entry)iterator.next();
+            ClientHandler client = (ClientHandler) pair.getValue();
+            System.out.println("Sending to client: "+client.getID());
+            client.sendMessage(message);
+        }
+
+    }
 
     public static void resetStock(){
         Stock stock = getStock("sample stock");

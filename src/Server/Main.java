@@ -2,6 +2,7 @@
 
 package Server;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -14,6 +15,10 @@ public class Main {
     private static Market market;
 
     public static void main(String[] args) {
+        run();
+    }
+
+    private static void run(){
         ServerSocket server = startServer();
         System.out.println("Server running and waiting for connections....");
         new Thread(market = new Market()).start();
