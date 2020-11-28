@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.Socket;
 import java.util.*;
 
 public class Market implements Runnable{
@@ -14,6 +12,11 @@ public class Market implements Runnable{
     public static LinkedHashMap<String, ClientHandler> clients = new LinkedHashMap<String, ClientHandler>();
     private static ArrayList<Stock> stock = new ArrayList<Stock>();
     private UpdateThread updateThread;
+
+
+    //Where the last used ID will be saved.
+    private static final String idDir = "src/lastID.txt";
+
 
     public Market() {
         Stock item = new Stock("sample stock");
@@ -53,7 +56,7 @@ public class Market implements Runnable{
 
     public synchronized static void updateIDFile(String ID){
         try {
-            FileWriter myWriter = new FileWriter("/JavaServer/src/lastID.txt");
+            FileWriter myWriter = new FileWriter(idDir);
             myWriter.write(ID);
             myWriter.close();
         } catch (IOException e) {
@@ -63,7 +66,7 @@ public class Market implements Runnable{
 
     private synchronized static String createIDFile() {
         try {
-            FileWriter myWriter = new FileWriter("/JavaServer/src/lastID.txt");
+            FileWriter myWriter = new FileWriter(idDir);
             myWriter.write("1");
             myWriter.close();
         } catch (IOException e) {
@@ -76,7 +79,7 @@ public class Market implements Runnable{
     public synchronized static String generateID(){
 
         File userdata;
-        userdata = new File("/JavaServer/src/lastID.txt");
+        userdata = new File(idDir);
         Scanner userDataReader = null;
         String ID = "";
         boolean createdFile = false;

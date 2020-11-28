@@ -15,12 +15,14 @@ public class Main {
     private static Market market;
 
     public static void main(String[] args) {
+
+
         run();
     }
 
     private static void run(){
         ServerSocket server = startServer();
-        System.out.println("Server running and waiting for connections....");
+        System.out.println("Server running and waiting for connections....");System.out.println("Working Directory = " + System.getProperty("user.dir"));
         new Thread(market = new Market()).start();
 
         //TODO not handling multiple clients.

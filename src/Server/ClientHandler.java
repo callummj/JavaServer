@@ -93,7 +93,7 @@ public class ClientHandler implements Runnable{
 
 
             //If server restarted, client will send message reconnection with their previous ID, otherwise they're sent a new ID.
-            System.out.println("reconeection: " + reconnection);
+            System.out.println("reconection: " + reconnection);
             if (reconnection.equals("reconnection")){
                 this.ID = reader.nextLine();
             }else if (reconnection.equals("new connection")){
