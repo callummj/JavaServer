@@ -14,8 +14,9 @@ public class Market implements Runnable{
     private UpdateThread updateThread;
 
 
-    //Where the last used ID will be saved.
-    private static final String idDir = "src/lastID.txt";
+    //Where the last used ID will be saved
+    private static final String idDir = "./src/lastID.txt"; //Directory to look for ID file if server is started from Server.Main
+    private static final String secondIdDir = "lastID.txt"; //Directory to look for ID file if server is started from ServerRestarter.Main (ProecessBuilder).
 
 
     public Market() {
@@ -55,53 +56,79 @@ public class Market implements Runnable{
     }
 
     public synchronized static void updateIDFile(String ID){
+        System.out.println("update id file");
         try {
-            FileWriter myWriter = new FileWriter(idDir);
-            myWriter.write(ID);
-            myWriter.close();
+            FileWriter idFile = new FileWriter(idDir);
+            ID = ID.replace("([ID])|\\s+", "");
+            idFile.write(ID);
+            idFile.close();
         } catch (IOException e) {
-            System.out.println("Error creating save data");
+
+                try {
+                    FileWriter myWriter = new FileWriter(secondIdDir);
+                    ID = ID.replace("([ID])|\\s+", "");
+                    myWriter.write(ID);
+                    myWriter.close();
+                } catch (IOException ioException) {
+                    System.out.println("second dir not work");
+                    ioException.printStackTrace();
+                }
+
+
         }
     }
 
     private synchronized static String createIDFile() {
+        System.out.println("create id file");
         try {
-            FileWriter myWriter = new FileWriter(idDir);
-            myWriter.write("1");
-            myWriter.close();
+            FileWriter idFile = new FileWriter(idDir);
+            idFile.write("1");
+            idFile.close();
         } catch (IOException e) {
-            System.out.println("Error creating save data");
+            try{
+                FileWriter idFile = new FileWriter(secondIdDir);
+                idFile.write("1");
+                idFile.close();
+            }catch (IOException e2){
+                System.out.println("Error creating save data creatIDFile func");
+            }
         }
         return "1"; //1 is the first ID generated
     }
 
-    //TODO: Make longer IDs ie when numbers taken up perhaps start using letters such as 255A, 234B, etc.
+    
     public synchronized static String generateID(){
-
-        File userdata;
-        userdata = new File(idDir);
+        System.out.println("---Generating ID funciton---");
+        String ID = null;
+        File userData;
         Scanner userDataReader = null;
-        String ID = "";
-        boolean createdFile = false;
-        try {
-            userDataReader = new Scanner(userdata);
-        } catch (FileNotFoundException e) { //File doesn't exist so create the file
-            ID = createIDFile();
-            createdFile = true;
-            ID = "1";
+        //Try opening using first directory: if the server is running in its own process
+        
+        userData = new File(idDir);
+        try{
+            userDataReader = new Scanner(userData);
+        }catch (FileNotFoundException e){
+            //If above fails, try opening using second directory for if the server is running via the Server restarter process.
+            userData = new File(secondIdDir);
+            try{
+                userDataReader = new Scanner(userData);
+            }catch (FileNotFoundException e2){
+                //ID file does not exist in this project so will need to be created and initiated.
+                System.out.println("ID File does not exist. Creating file.");
+                ID = createIDFile();
+                return ID;
+            }
         }
-        if (!(createdFile)){
-            ID = userDataReader.nextLine();
-            int IDint = Integer.parseInt(ID); //Convert to int to increment
-            IDint++;
-            ID = String.valueOf(IDint);
-            userDataReader.close();
-        }
 
-        return ID;
+        ID = userDataReader.nextLine();
+        ID = ID.replace("([ID])|\\s+", "");
+        System.out.println("ID before idint: " + ID);
+        int IDint = Integer.parseInt(ID); //Convert to int to increment
+        IDint++;
 
-
+        return String.valueOf(IDint);
     }
+
 
     public static ClientHandler getClient(String ID) {
         return clients.get(ID);
@@ -126,13 +153,14 @@ public class Market implements Runnable{
 
         System.out.println(newOwner.getID() + " is in trade");
 
-        /* UNCOMMENT FOR TESTING IF A TRADER DISCONNECTS MID-TRADE
+        // UNCOMMENT FOR TESTING IF A TRADER DISCONNECTS MID-TRADE
+
         try {
             Thread.sleep(10000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        */
+
 
 
         ClientHandler oldOwner = stock.getOwner();
@@ -157,7 +185,7 @@ public class Market implements Runnable{
                     return false;
                 }
             }else{
-                System.out.println("edge case");
+                System.out.println("Stock owner was unable to be changed.");
                 return false;
             }
         }

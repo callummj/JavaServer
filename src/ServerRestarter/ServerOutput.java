@@ -23,7 +23,9 @@ public class ServerOutput implements Runnable {
         while (true) { 
             try {
                 if (reader.readLine()!= null){
-                    System.out.println(reader.readLine());
+                    String output = reader.readLine();
+
+                    System.out.println(output);
                 }
 
 

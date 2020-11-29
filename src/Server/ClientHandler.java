@@ -98,7 +98,8 @@ public class ClientHandler implements Runnable{
                 this.ID = reader.nextLine();
             }else if (reconnection.equals("new connection")){
                 System.out.println("here");
-                this.ID = Market.generateID();
+                this.ID = Market.generateID().replace("([ID])|\\s+", "");
+                System.out.println("ID poo: " + this.ID);
                 sendMessage("[ID] " + this.ID);
             }
 
@@ -179,7 +180,8 @@ public class ClientHandler implements Runnable{
                         case "o": //Single character sent from the client every 5 seconds to see if the connection is still alive.
                             break;
                         default:
-                            System.out.println("error");System.out.println(input);
+                            System.out.println("error input")
+                            ;System.out.println(input);
                     }
 
                     //Handles client disconnecting

@@ -76,9 +76,9 @@ public class Main {
 
     }
 
-    protected static void run(String clazz) throws IOException, InterruptedException {
+    protected static void run(String mainLoc) throws IOException, InterruptedException {
         System.out.println("in run");
-        ProcessBuilder pb = new ProcessBuilder("java", clazz);
+        ProcessBuilder pb = new ProcessBuilder("java", mainLoc);
         System.out.println("made process");
         pb.redirectError();
         pb.directory(new File("src"));
@@ -104,7 +104,6 @@ public class Main {
         try{
             socket = new Socket("localhost", 8888);
         }catch (ConnectException e){
-            System.out.println("stuck here");
             restartServer();
             connect();
         }
