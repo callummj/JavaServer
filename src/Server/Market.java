@@ -120,7 +120,13 @@ public class Market implements Runnable{
             }
         }
 
-        ID = userDataReader.nextLine();
+        try{
+            ID = userDataReader.nextLine();
+        }catch (NoSuchElementException e){
+            //Corrupted file
+            ID = createIDFile();
+        }
+        userDataReader.close();
         ID = ID.replace("([ID])|\\s+", "");
         System.out.println("ID before idint: " + ID);
         int IDint = Integer.parseInt(ID); //Convert to int to increment
@@ -154,13 +160,13 @@ public class Market implements Runnable{
         System.out.println(newOwner.getID() + " is in trade");
 
         // UNCOMMENT FOR TESTING IF A TRADER DISCONNECTS MID-TRADE
-
+/*
         try {
             Thread.sleep(10000);
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
-
+*/
 
 
         ClientHandler oldOwner = stock.getOwner();

@@ -10,7 +10,8 @@ import Server.*;
 
 public class Main {
 
-
+    static OutputStream os;
+    static Process server;
     static Socket socket;
     private static final String serverLocation = "C:\\Users\\callu\\IdeaProjects\\CE303_Assignment\\JavaServer\\src\\Server\\Main.java";
 
@@ -22,18 +23,6 @@ public class Main {
             e.printStackTrace();
         }
 
-        OutputStream output = null;
-        try {
-            output = socket.getOutputStream();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        OutputStream os = null;
-        try {
-            os = socket.getOutputStream();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
 
         while (true) {
             try {
@@ -44,14 +33,17 @@ public class Main {
             try {
                 os.write('o');
             } catch (IOException e) {
-                System.out.println("error");
-
+                System.out.println("48 error");
+                System.out.println("os: " + os);
                 System.out.println("Server is down, restarting server");
                 try {
                     restartServer();
+                    Thread.sleep(1000); //Wait to give server a chance to restart
                     connect();
                 } catch (IOException error) {
                     System.out.println("Cannot restart server");
+                } catch (InterruptedException interruptedException) {
+                    interruptedException.printStackTrace();
                 }
 
             }
@@ -83,9 +75,9 @@ public class Main {
         pb.redirectError();
         pb.directory(new File("src"));
 
-        Process p = pb.start();
+        server = pb.start();
         System.out.println("Displaying server output:");
-        new Thread(new ServerOutput(p)).start();
+        new Thread(new ServerOutput(server)).start();
         //int result = p.waitFor();
 
     }
@@ -106,6 +98,12 @@ public class Main {
         }catch (ConnectException e){
             restartServer();
             connect();
+        }
+
+        try {
+            os = socket.getOutputStream();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
 
     }

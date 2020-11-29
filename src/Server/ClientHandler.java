@@ -1,6 +1,7 @@
 package Server;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintWriter;
 import java.net.*;
 import java.util.Iterator;
@@ -49,7 +50,7 @@ public class ClientHandler implements Runnable{
     }
 
     public String connectionsToString(){
-        StringBuilder result = new StringBuilder("[UPDATE]");
+        StringBuilder result = new StringBuilder("[CONN]");
         Iterator iterator = Market.clients.entrySet().iterator();
         int i = 0;
         while (iterator.hasNext()) {
@@ -97,7 +98,7 @@ public class ClientHandler implements Runnable{
             if (reconnection.equals("reconnection")){
                 this.ID = reader.nextLine();
             }else if (reconnection.equals("new connection")){
-                System.out.println("here");
+                System.out.println("Reconnection");
                 this.ID = Market.generateID().replace("([ID])|\\s+", "");
                 System.out.println("ID poo: " + this.ID);
                 sendMessage("[ID] " + this.ID);
@@ -123,12 +124,12 @@ public class ClientHandler implements Runnable{
             this.setConnected(true);
 
             System.out.println("User: " + this.getID() + " has connected to the server");
-            Market.updateMarket("[CONN] User: " + this.getID() + " has connected to the server");
+            Market.updateMarket("[NEW_CONN]User: " + this.getID() + " has connected to the server");
             String connectionsResponse; //Used to send connections status to client
             while (connected) {
                 try{
                     String input = reader.nextLine();
-
+                    input = input.replace("@", ""); //@ = ping signal and is not a valid character for any commands.
                     switch (String.valueOf(input.toLowerCase())) {
                         case "balance":
                             if (getBalance() !=0){
@@ -152,9 +153,10 @@ public class ClientHandler implements Runnable{
                             String IDtoSellTo = reader.nextLine();
                             ClientHandler clientToSellTo = Market.getClient(IDtoSellTo);
                             Stock stock = Market.getStock("sample stock");
+                            Boolean sellSuccess = false;
                             if (clientToSellTo != null){
                                 if (stock.getOwner() != clientToSellTo){
-                                    Market.trade(clientToSellTo, stock);
+                                    sellSuccess = Market.trade(clientToSellTo, stock);
                                 }else{
                                     System.out.println("Trade unsucessful");
                                     sendMessage("[WARNING] Trade unsucessful");
@@ -162,6 +164,10 @@ public class ClientHandler implements Runnable{
                             }else{
                                 System.out.println("Invalid client ID");
                                 sendMessage("[WARNING] Invalid client ID");
+                            }
+                            if (sellSuccess){
+                                System.out.println("sending successul");
+                                sendMessage("[UPDATE] Sell successful");
                             }
                             break;
                         case "status":
@@ -171,17 +177,18 @@ public class ClientHandler implements Runnable{
                             sendMessage(message);
                             break;
                         case "connections":
-                            connectionsResponse = "[CONN]" + connectionsToString();
+                            connectionsResponse = connectionsToString();
                             sendMessage(connectionsResponse);
                             break;
                         case "quit":
                             connected = false; // break out of while loop to catch statement: setConnected() runs the  quit() function, so should not be used here.
                             break;
-                        case "o": //Single character sent from the client every 5 seconds to see if the connection is still alive.
+                        case "@": //Single character sent from the client every 5 seconds to see if the connection is still alive.
+                            System.out.println("ping detected.");
                             break;
                         default:
-                            System.out.println("error input")
-                            ;System.out.println(input);
+                            System.out.println("error input");
+                            System.out.println("input: "  + input);
                     }
 
                     //Handles client disconnecting
@@ -191,6 +198,7 @@ public class ClientHandler implements Runnable{
 
             }
         }catch (IOException e){
+            e.printStackTrace();
             System.out.println("Error establishing I/O stream");
         }
 
