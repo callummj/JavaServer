@@ -1,8 +1,6 @@
 package Server;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.*;
 import java.util.Iterator;
 import java.util.Map;
@@ -22,7 +20,6 @@ public class ClientHandler implements Runnable{
     public ClientHandler(Socket socket, Market market){
         this.socket = socket;
         this.market = market;
-
     }
 
     public boolean isConnected(){
@@ -68,6 +65,7 @@ public class ClientHandler implements Runnable{
 
     public void quit(){
         System.out.println("User: " + this.getID() + " disconnected from server.");
+        Main.gui.removeConnection(this.getID());
         Market.disconnectClient(this);
         try {
             this.socket.close();
@@ -77,6 +75,7 @@ public class ClientHandler implements Runnable{
         this.connected = false;
         Thread.currentThread().interrupt(); //Closes current thread.
         Market.updateMarket("[CONN] " + this.getID() + " disconnected");
+
     }
     @Override
     public void run() {
@@ -96,16 +95,55 @@ public class ClientHandler implements Runnable{
             //If server restarted, client will send message reconnection with their previous ID, otherwise they're sent a new ID.
             System.out.println("reconection: " + reconnection);
             if (reconnection.equals("reconnection")){
+
+
+                /*
+
+                if (Market.getStock().getOwner() == null){ //if the owner is null, but the user is telling the server that it is a reconnection, it means the server has just restarted and so the previous owner of the stock should exist.
+
+                    File lastOwnerData = new File("lastOwner.txt");
+                    String lastOwnerID;
+                    Scanner lastOwnerReader = null;
+                    boolean lastOwnerFound = true;
+                    try {
+                        lastOwnerReader = new Scanner(lastOwnerData);
+                    }catch(FileNotFoundException e){
+                        try{
+                            lastOwnerData = new File("./src/lastOwner.txt");
+                            lastOwnerReader = new Scanner(lastOwnerData);
+                        }catch(FileNotFoundException error){
+                            lastOwnerFound = false;
+                            System.out.println("last owner file doesnt exist.");
+                        }
+                    }
+                    if (lastOwnerFound){
+                        String lastOwnerIDStr = lastOwnerReader.nextLine();
+                        if (Market.clients.containsValue(lastOwnerIDStr)){ //if the last owner is connected otherwise will set owner to random connection.
+                            ClientHandler client = Market.clients.get(lastOwnerIDStr);
+                            Stock stock = Market.getStock();
+                            stock.setOwner(client);
+                        }
+                    }else{
+                        //last owner file does not exist.
+                        Market.createLastIDFile();
+                    }
+
+                }*/
+
+
+
                 this.ID = reader.nextLine();
             }else if (reconnection.equals("new connection")){
                 System.out.println("Reconnection");
                 this.ID = Market.generateID().replace("([ID])|\\s+", "");
-                System.out.println("ID poo: " + this.ID);
+
                 sendMessage("[ID] " + this.ID);
             }
 
 
+
             Market.updateIDFile(this.ID);
+            Main.gui.newConnection(this.ID);
 
             /*
             if (!(reconnection.equals("new connection"))){ //user has reconnected
@@ -125,7 +163,9 @@ public class ClientHandler implements Runnable{
 
             System.out.println("User: " + this.getID() + " has connected to the server");
             Market.updateMarket("[NEW_CONN]User: " + this.getID() + " has connected to the server");
+
             String connectionsResponse; //Used to send connections status to client
+            Stock stock = Market.getStock();
             while (connected) {
                 try{
                     String input = reader.nextLine();
@@ -134,51 +174,60 @@ public class ClientHandler implements Runnable{
                         case "balance":
                             if (getBalance() !=0){
                                 sendMessage("[UPDATE]" + String.valueOf(getBalance()));
+
                             }else{
                                 sendMessage("[WARNING] You do not own any stock.");
                             }
                             break;
                         case "buy":
                             //TODO Might have to go back to Market.trade as error is client side rather than serverside.
-                            boolean success = Market.trade(this, Market.getStock("sample stock"));
+
+                            boolean success = Market.trade(stock.getOwner(), this, stock);
                             if (success){
-                                sendMessage("[WARNING] Trade successful");
+                                sendMessage("[WARNING]Trade successful");
+
                             }else{
-                                sendMessage("[WARNING] Trade unsucessful");
+                                sendMessage("[WARNING]Trade unsucessful");
+
                             }
                             break;
 
 
                         case "sell":
                             String IDtoSellTo = reader.nextLine();
+                            IDtoSellTo = IDtoSellTo.replace("@", ""); //if any ping requests got mixed with the stream
+                            IDtoSellTo = IDtoSellTo.replace(" ", ""); //if any ping requests got mixed with the stream
                             ClientHandler clientToSellTo = Market.getClient(IDtoSellTo);
-                            Stock stock = Market.getStock("sample stock");
+                            System.out.println("Client to sell to: " + clientToSellTo);
                             Boolean sellSuccess = false;
                             if (clientToSellTo != null){
                                 if (stock.getOwner() != clientToSellTo){
-                                    sellSuccess = Market.trade(clientToSellTo, stock);
+                                    sellSuccess = Market.trade(this, clientToSellTo, stock);
                                 }else{
                                     System.out.println("Trade unsucessful");
                                     sendMessage("[WARNING] Trade unsucessful");
                                 }
                             }else{
+                                System.out.println("ID to sell to: " + IDtoSellTo);
                                 System.out.println("Invalid client ID");
-                                sendMessage("[WARNING] Invalid client ID");
+                                sendMessage("[WARNING]Invalid client ID to sell to");
+
                             }
                             if (sellSuccess){
                                 System.out.println("sending successul");
-                                sendMessage("[UPDATE] Sell successful");
+                                sendMessage("[UPDATE]Sell successful");
+
                             }
                             break;
                         case "status":
-
-                            String message = "[UPDATE]Stock owned by trader: " + Market.getStock("sample stock").getOwner().getID();
+                            String message = "[UPDATE]Stock owned by trader: " + Market.getStock().getOwner().getID();
                             System.out.println("sending status message: " + message);
                             sendMessage(message);
                             break;
                         case "connections":
                             connectionsResponse = connectionsToString();
                             sendMessage(connectionsResponse);
+
                             break;
                         case "quit":
                             connected = false; // break out of while loop to catch statement: setConnected() runs the  quit() function, so should not be used here.
@@ -186,9 +235,12 @@ public class ClientHandler implements Runnable{
                         case "@": //Single character sent from the client every 5 seconds to see if the connection is still alive.
                             System.out.println("ping detected.");
                             break;
+                        case "": //Single character which acts as a ping when connection has been established.
+                            break;
                         default:
                             System.out.println("error input");
                             System.out.println("input: "  + input);
+                            break;
                     }
 
                     //Handles client disconnecting

@@ -12,11 +12,14 @@ public class Main {
 
     private final static int port = 8888;
 
+    public static GUI gui;
+
     private static Market market;
 
     public static void main(String[] args) {
 
-
+        gui = new GUI();
+        new Thread(gui).start();
         run();
     }
 
@@ -55,6 +58,7 @@ public class Main {
             socket = new ServerSocket(8888);
         }catch (IOException e){
             System.out.println("Error starting server");
+            gui.updateConsole("Error starting server, check port 8888");
             System.exit(100);
         }
         return socket;
