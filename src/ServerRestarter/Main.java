@@ -13,10 +13,11 @@ public class Main {
     static OutputStream os;
     static Process server;
     static Socket socket;
-    private static final String serverLocation = "C:\\Users\\callu\\IdeaProjects\\CE303_Assignment\\JavaServer\\src\\Server\\Main.java";
+
 
     public static void main(String[] args) {
         System.out.println("Starting...");
+        System.out.println("working dir: " + System.getProperty("user.dir"));
         try {
             connect();
         } catch (IOException e) {
@@ -33,8 +34,6 @@ public class Main {
             try {
                 os.write('o');
             } catch (IOException e) {
-                System.out.println("48 error");
-                System.out.println("os: " + os);
                 System.out.println("Server is down, restarting server");
                 try {
                     restartServer();
@@ -54,11 +53,9 @@ public class Main {
     protected static void restartServer() throws IOException {
 
         System.out.println("Starting server...");
-
-
         try {
             int result = compile("Server/Main.java");
-            System.out.println("javac returned " + result);
+            System.out.println("compile result: " + result);
             run("Server.Main");
         }catch (IOException | InterruptedException e){
             System.out.println("error");
@@ -68,9 +65,9 @@ public class Main {
 
     }
 
-    protected static void run(String mainLoc) throws IOException, InterruptedException {
+    protected static void run(String serverLocation) throws IOException, InterruptedException {
         System.out.println("in run");
-        ProcessBuilder pb = new ProcessBuilder("java", mainLoc);
+        ProcessBuilder pb = new ProcessBuilder("java", serverLocation);
         System.out.println("made process");
         pb.redirectError();
         pb.directory(new File("src"));

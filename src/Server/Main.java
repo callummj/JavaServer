@@ -2,6 +2,8 @@
 
 package Server;
 
+import Server.*;
+
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -14,7 +16,7 @@ public class Main {
 
     public static GUI gui;
 
-    private static Market market;
+    public static Market market;
 
     public static void main(String[] args) {
 

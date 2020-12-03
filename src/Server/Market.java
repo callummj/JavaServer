@@ -19,6 +19,7 @@ public class Market implements Runnable{
     private static final String lastOwnerDir = "./src/lastOwner.txt";
     private static final String secondLastOwnerDir = "lastOwner.txt";
 
+    public static boolean checkConn = false; //used in the connectionEnsurer
 
     public Market() {
         Stock item = new Stock("sample stock");
@@ -205,28 +206,33 @@ public class Market implements Runnable{
 
 
 
+
     //TODO doesnt work: may have to sync threads.
     public static synchronized boolean trade(ClientHandler oldOwner, ClientHandler newOwner, Stock stock) {
 
 
-        // UNCOMMENT FOR TESTING IF A TRADER DISCONNECTS MID-TRADE
-/*
-        try {
-            Thread.sleep(10000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-*/
 
 
-        //ClientHandler oldOwner = stock.getOwner();
+        System.out.println("in trade started");
+
+
+
+
+        Thread t1 = new Thread(new connectionEnsurer(oldOwner));
+        Thread t2 = new Thread(new connectionEnsurer(newOwner));
+        System.out.println("starting threads");
+        t1.start();
+        t2.start();
+
         if (oldOwner == stock.getOwner()){
             //Check if the owner is also the buyer
             if (stock.getOwner() == newOwner) {
 
-                //newOwner.sendMessage("Buy/Sell failed: cannot sell to owner.");
+
                 System.out.println("There was an attempted trade of: " + stock.getName() + " but failed, because the owner tried to trade with themselves.");
-                return false;
+                t1.interrupt();
+                t2.interrupt();
+
             } else {
                 stock.setOwner(newOwner);
                 System.out.println("new owner: " + stock.getOwner().getID());
@@ -240,37 +246,41 @@ public class Market implements Runnable{
                         Main.gui.updateConsole(updateMsg);
                         Main.gui.updateStockOwner(String.valueOf(newOwner.getID()));
                         updateLastOwnerFile(newOwner.getID());
+                        t1.interrupt();
+                        t2.interrupt();
                         return true;
                     } else {
                         stock.setOwner(oldOwner);
                         System.out.println("new owner offline");
+                        t1.interrupt();
+                        t2.interrupt();
                         return false;
                     }
                 }else{
                     System.out.println("Stock owner was unable to be changed.");
+                    t1.interrupt();
+                    t2.interrupt();
+
                     return false;
                 }
             }
         }else{
             System.out.println("client: " + oldOwner.getID() + " tried to sell the stock, but are not the owner.");
+            t1.interrupt();
+            t2.interrupt();
             return false;
         }
 
-
+        t1.interrupt();
+        t2.interrupt();
+    return false;
     }
 
-    public static synchronized void userDisconnectionUpdate(String message){
 
-    }
 
     //Updates the users of the current market
     public static synchronized void updateMarket(String message){
-        /*
-        if (!(message.startsWith("[UPDATE]"))){
-            if (!(message.startsWith("[CONN]"))){
-                message = "[UPDATE] " + message;
-            }
-        }*/
+
         System.out.println("sending update to clients. Message: " + message);
         Iterator iterator = clients.entrySet().iterator();
         while (iterator.hasNext()) {
@@ -310,7 +320,7 @@ public class Market implements Runnable{
 
     }
 
-    public static void createLastIDFile(){
+    public static void createLastOwnerFile(){
         try {
             FileWriter lastOwnerFile = new FileWriter(lastOwnerDir);
             Stock stock = getStock();

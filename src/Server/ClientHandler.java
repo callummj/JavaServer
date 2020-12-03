@@ -77,6 +77,11 @@ public class ClientHandler implements Runnable{
         Market.updateMarket("[CONN] " + this.getID() + " disconnected");
 
     }
+
+    public Socket getSocket(){
+        return this.socket;
+    }
+
     @Override
     public void run() {
 
